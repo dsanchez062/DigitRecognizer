@@ -8,11 +8,11 @@
 #define stacksize 1048576
 
 static double **data;
-int data_nrows;
+int data_nrows = 60000;
 int data_ncols = 784;
-char *my_path = ""; // tendréis que poner vuestro path
+char *my_path = "/home/dsanchez062/Desktop/DigitRecognizer/"; // tendréis que poner vuestro path
 
-int seed = 0;
+int seed = 6;
 int matrices_rows[4] = {784, 200, 100, 50};
 int matrices_columns[4] = {200, 100, 50, 10};
 int vector_rows[4] = {200, 100, 50, 10};
@@ -31,30 +31,54 @@ static double *vec4;
 
 int read_matrix(double **mat, char *file, int nrows, int ncols, int fac) {
     /*
-     * Dada una matrix (mat), un nombre de fichero (file), una cantidad de filas
+     * Dada una matriz (mat), un nombre de fichero (file), una cantidad de filas
      * (nrows) y columnas (ncols), y un multiplicador (fac, no se usa, es 1), deja en mat la
      * matriz (de dimensión nrows x ncols) de datos contenida en el fichero con
      * nombre file
      */
 
-    char *buffer; // Esto contendrá toda la fila
-    char *record;  //Esto contendrá las columnas de la fila
-    FILE *fstream = fopen(file, "r");
-    double aux;
-    // Hay que hacer control de errores
-    for (int row = 0; row < nrows; row++) {
-	// Leer, separar, y reservar columnas de la fila
-        for (int column = 0; column < ncols; column++) {
-            if (record) {
-                aux = strtod(record, NULL) * (float)fac;
-                mat[row][column] = aux;
-            } else {
-                mat[row][column] = -1.0;
-            }
-            // Siguiente Token
-        }
+    char *buffer = (char *)malloc(4096 * sizeof(char)); // Buffer para una fila completa
+    if (!buffer) {
+        printf("Error: No se pudo asignar memoria para el buffer\n");
+        exit(1);
     }
-    // Hay que cerrar ficheros y liberar memoria
+
+    FILE *fstream = fopen(file, "r");
+    if (!fstream) {
+        printf("Error: No se pudo abrir el archivo %s\n", file);
+        free(buffer);
+        exit(1);
+    }
+
+    double aux;
+    int row = 0;
+
+    // Leer fila por fila del archivo
+    while (fgets(buffer, 4096, fstream) != NULL && row < nrows) {
+        char *record = strtok(buffer, ",");  // Suponiendo que las columnas están separadas por comas
+        int column = 0;
+
+        // Leer cada valor dentro de la fila
+        while (record != NULL && column < ncols) {
+            aux = strtod(record, NULL) * (float)fac;
+            mat[row][column] = aux;
+            record = strtok(NULL, ",");  // Leer siguiente valor de la fila
+            column++;
+        }
+
+        row++;
+    }
+
+    // Asegurarse de que no hemos leído más de lo necesario
+    if (row != nrows) {
+        printf("Error: El archivo tiene menos filas de las esperadas\n");
+        fclose(fstream);
+        free(buffer);
+        exit(1);
+    }
+
+    fclose(fstream);
+    free(buffer);
     return 0;
 }
 
@@ -64,16 +88,30 @@ int read_vector(double *vect, char *file, int nrows) {
      * (nrows), deja en vect el vector (de dimensión nrows) de datos contenido en
      * el fichero con nombre file
      */
-    char *buffer = // Esto contendrá el valor
+    char *buffer = (char *)malloc(4096 * sizeof(char)); // Esto contendrá el valor
     FILE *fstream = fopen(file, "r");
+
+    if (!fstream) {
+        printf("Error: No se pudo abrir el archivo %s\n", file);
+        exit(1);
+    }
+
     double aux;
     // Control de errores
+
     for (int row = 0; row < nrows; row++) {
-        // leer el valor
+        if (fgets(buffer, 4096, fstream) == NULL) {
+            printf("Error: No se pudo leer la línea %d en %s\n", row, file);
+            exit(1);
+        }
         aux = strtod(buffer, NULL);
         vect[row] = aux;
     }
+
+
+
     // Hay que cerrar ficheros y liberar memoria
+    free(buffer);
     return 0;
 }
 
@@ -95,28 +133,58 @@ void print_matrix(double **mat, int nrows, int ncols, int offset_row,
 
 
 void load_data(char *path) {
-
     /*
      * Dado un directorio en el que están los datos y parámetros, los carga en las
      * variables de entorno
      */
+    
+    str = malloc(4096 * sizeof(char)); // Asegurar un buffer suficiente
+    if (!str) {
+        printf("Error: No se pudo asignar memoria para str\n");
+        exit(1);
+    }
 
     digits = malloc(data_nrows *
                     sizeof(double)); // Los valores que idealmente predeciremos
-    sprintf(str, "%scsvs/digits.csv", path);
+    sprintf(str, "%sdata/digits.csv", path);
     read_vector(digits, str, data_nrows);
 
-    // Las matrices
-    mat1 = malloc(matrices_rows[0] * sizeof(*mat1));
-    sprintf(str, "%sparameters/weights%d_%d.csv", path, 0, seed);
+    // Reservar memoria para mat1
+    mat1 = malloc(matrices_rows[0] * sizeof(double *));
+    for (int i = 0; i < matrices_rows[0]; i++) {
+        mat1[i] = malloc(matrices_columns[0] * sizeof(double));
+    }
+    sprintf(str, "%sdata/weights/csv/weights%d_%d.csv", path, 0, seed);
     read_matrix(mat1, str, matrices_rows[0], matrices_columns[0], 1);
 
+    // Reservar memoria para mat2
+    mat2 = malloc(matrices_rows[1] * sizeof(double *));
+    for (int i = 0; i < matrices_rows[1]; i++) {
+        mat2[i] = malloc(matrices_columns[1] * sizeof(double));
+    }
+    sprintf(str, "%sdata/weights/csv/weights%d_%d.csv", path, 1, seed);
+    read_matrix(mat2, str, matrices_rows[1], matrices_columns[1], 1);
+
+    // Reservar memoria para mat3
+    mat3 = malloc(matrices_rows[2] * sizeof(double *));
+    for (int i = 0; i < matrices_rows[2]; i++) {
+        mat3[i] = malloc(matrices_columns[2] * sizeof(double));
+    }
+    sprintf(str, "%sdata/weights/csv/weights%d_%d.csv", path, 2, seed);
+    read_matrix(mat3, str, matrices_rows[2], matrices_columns[2], 1);
+
+    // Reservar memoria para mat4
+    mat4 = malloc(matrices_rows[3] * sizeof(double *));
+    for (int i = 0; i < matrices_rows[3]; i++) {
+        mat4[i] = malloc(matrices_columns[3] * sizeof(double));
+    }
+    sprintf(str, "%sdata/weights/csv/weights%d_%d.csv", path, 3, seed);
+    read_matrix(mat4, str, matrices_rows[3], matrices_columns[3], 1);
 
     // Los vectores
     vec1 = malloc(vector_rows[0] * sizeof(double));
-    sprintf(str, "%sparameters/biases%d_%d.csv", path, 0, seed);
+    sprintf(str, "%sdata/biases/csv/biases%d_%d.csv", path, 0, seed);
     read_vector(vec1, str, vector_rows[0]);
-
 }
 
 void unload_data() {
@@ -158,4 +226,3 @@ int main(int argc, char *argv[]) {
     unload_data();
     return 0;
 }
-x
