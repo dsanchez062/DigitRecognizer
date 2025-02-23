@@ -4,6 +4,7 @@
 #include <stdio.h>  // file handling functions
 #include <stdlib.h> // atoi
 #include <string.h> // strtok
+#include <SDL2/SDL.h>
 #include <sys/wait.h>
 #define stacksize 1048576
 
@@ -55,14 +56,14 @@ int read_matrix(double **mat, char *file, int nrows, int ncols, int fac) {
 
     // Leer fila por fila del archivo
     while (fgets(buffer, 4096, fstream) != NULL && row < nrows) {
-        char *record = strtok(buffer, ",");  // Suponiendo que las columnas están separadas por comas
+        char *record = strtok(buffer, " ");  // Usar espacio como delimitador
         int column = 0;
 
         // Leer cada valor dentro de la fila
         while (record != NULL && column < ncols) {
             aux = strtod(record, NULL) * (float)fac;
             mat[row][column] = aux;
-            record = strtok(NULL, ",");  // Leer siguiente valor de la fila
+            record = strtok(NULL, " ");  // Leer siguiente valor de la fila, usando espacio como delimitador
             column++;
         }
 
@@ -128,6 +129,15 @@ void print_matrix(double **mat, int nrows, int ncols, int offset_row,
             printf("%f ", mat[row + offset_row][col + offset_col]);
         }
         printf("\n");
+    }
+}
+
+void print_vector(double *vect, int nrows) {
+    /*
+     * Dado un vector (vect), imprime su contenido.
+     */
+    for (int i = 0; i < nrows; i++) {
+        printf("%lf\n", vect[i]);
     }
 }
 
@@ -215,21 +225,92 @@ void unload_data() {
 
 void print(void *arg) { printf("Hola, soy %d\n", *(int *)arg); }
 
-int main(int argc, char *argv[]) {
-    /*
-     * El programa recibe un único argumento, la cantidad de procesos que se
-     * emplearán en la paralelización. Por ejemplo, parallel 3 tendrá que dividir
-     * la matriz en tres, y lanzar tres procesos paralelos. Cada proceso, deberá
-     * procesar un tercio de la matriz de datos
-     */
+// Función para mostrar la imagen usando SDL2
+void show_image(SDL_Renderer *renderer, double *image_data) {
+    // Crear la superficie y textura para mostrar la imagen
+    SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormat(0, 28, 28, 32, SDL_PIXELFORMAT_RGBA32);
+    SDL_LockSurface(surface);
 
+    // Iterar sobre los valores de los píxeles (28x28)
+    for (int i = 0; i < 28; i++) {
+        for (int j = 0; j < 28; j++) {
+            int pixel_index = i * 28 + j;
+            unsigned char color_value = (unsigned char)(image_data[pixel_index] * 255);  // Convertir a valor entre 0-255
+
+            // Debug: Imprimir valores de los píxeles
+            //printf("Pixel [%d, %d] = %f -> %d\n", i, j, image_data[pixel_index], color_value);
+
+            // Establecer el valor del píxel en la superficie
+            Uint32 color = SDL_MapRGB(surface->format, color_value, color_value, color_value);
+            ((Uint32 *)surface->pixels)[i * 28 + j] = color;
+        }
+    }
+
+    SDL_UnlockSurface(surface);
+
+    // Crear una textura a partir de la superficie
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+
+    // Limpiar la pantalla y renderizar la imagen
+    SDL_RenderClear(renderer);
+    SDL_RenderCopy(renderer, texture, NULL, NULL);
+    SDL_RenderPresent(renderer);
+
+    SDL_DestroyTexture(texture);
+}
+
+
+// Función principal
+// Función principal
+int main(int argc, char *argv[]) {
     if (argc != 2) {
         printf("El programa debe tener un único argumento, la cantidad de procesos que se van a generar\n");
         exit(1);
     }
 
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        printf("Error al inicializar SDL2: %s\n", SDL_GetError());
+        exit(1);
+    }
+
+    SDL_Window *window = SDL_CreateWindow("Imagen de 28x28",
+                                          SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                                          400, 400, SDL_WINDOW_SHOWN);
+    if (!window) {
+        printf("Error al crear la ventana: %s\n", SDL_GetError());
+        exit(1);
+    }
+
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    if (!renderer) {
+        printf("Error al crear el renderizador: %s\n", SDL_GetError());
+        exit(1);
+    }
+
     load_data(my_path);
-    
+
+    // Mostrar la primera imagen de la matriz 'data'
+    //show_image(renderer, data[0]);
+
+    // Bucle de eventos para mantener la ventana abierta
+    SDL_Event event;
+    int quit = 0;
+
+    while (!quit) {
+        // Esperar un evento
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
+                quit = 1;  // Si el usuario cierra la ventana, salir del bucle
+            }
+        }
+    }
+
     unload_data();
+
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+
     return 0;
 }
