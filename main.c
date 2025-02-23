@@ -262,6 +262,45 @@ void show_image(SDL_Renderer *renderer, double *image_data) {
 
 
 // Función principal
+// Función para inicializar SDL y crear la ventana
+SDL_Window* init_window(const char *title, int width, int height) {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        printf("Error al inicializar SDL2: %s\n", SDL_GetError());
+        exit(1);
+    }
+
+    SDL_Window *window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_SHOWN);
+    if (!window) {
+        printf("Error al crear la ventana: %s\n", SDL_GetError());
+        exit(1);
+    }
+    return window;
+}
+
+// Función para crear el renderizador
+SDL_Renderer* init_renderer(SDL_Window *window) {
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    if (!renderer) {
+        printf("Error al crear el renderizador: %s\n", SDL_GetError());
+        exit(1);
+    }
+    return renderer;
+}
+
+// Función para manejar los eventos y mantener la ventana abierta
+void handle_events() {
+    SDL_Event event;
+    int quit = 0;
+
+    while (!quit) {
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
+                quit = 1;
+            }
+        }
+    }
+}
+
 // Función principal
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -269,42 +308,14 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        printf("Error al inicializar SDL2: %s\n", SDL_GetError());
-        exit(1);
-    }
-
-    SDL_Window *window = SDL_CreateWindow("Imagen de 28x28",
-                                          SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                                          400, 400, SDL_WINDOW_SHOWN);
-    if (!window) {
-        printf("Error al crear la ventana: %s\n", SDL_GetError());
-        exit(1);
-    }
-
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (!renderer) {
-        printf("Error al crear el renderizador: %s\n", SDL_GetError());
-        exit(1);
-    }
+    SDL_Window *window = init_window("Imagen de 28x28", 400, 400);
+    SDL_Renderer *renderer = init_renderer(window);
 
     load_data(my_path);
+    show_image(renderer, data[0]);
 
-    // Mostrar la primera imagen de la matriz 'data'
-    //show_image(renderer, data[0]);
-
-    // Bucle de eventos para mantener la ventana abierta
-    SDL_Event event;
-    int quit = 0;
-
-    while (!quit) {
-        // Esperar un evento
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
-                quit = 1;  // Si el usuario cierra la ventana, salir del bucle
-            }
-        }
-    }
+    // Mantener la ventana abierta hasta que el usuario la cierre
+    handle_events();
 
     unload_data();
 
