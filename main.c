@@ -203,6 +203,18 @@ void load_data(char *path) {
     vec1 = malloc(vector_rows[0] * sizeof(double));
     sprintf(str, "%sdata/biases/csv/biases%d_%d.csv", path, 0, seed);
     read_vector(vec1, str, vector_rows[0]);
+
+    vec2 = malloc(vector_rows[1] * sizeof(double));
+    sprintf(str, "%sdata/biases/csv/biases%d_%d.csv", path, 1, seed);
+    read_vector(vec2, str, vector_rows[1]);
+
+    vec3 = malloc(vector_rows[2] * sizeof(double));
+    sprintf(str, "%sdata/biases/csv/biases%d_%d.csv", path, 2, seed);
+    read_vector(vec3, str, vector_rows[2]);
+
+    vec4 = malloc(vector_rows[3] * sizeof(double));
+    sprintf(str, "%sdata/biases/csv/biases%d_%d.csv", path, 3, seed);
+    read_vector(vec4, str, vector_rows[3]);
 }
 
 void unload_data() {
@@ -222,6 +234,50 @@ void unload_data() {
     free(str);
 }
 
+// Función para multiplicación matricial
+void mat_mul(double **A, double **B, double **result, int A_rows, int A_cols, int B_cols) {
+    for (int i = 0; i < A_rows; i++) {
+        for (int j = 0; j < B_cols; j++) {
+            result[i][j] = 0;
+            for (int k = 0; k < A_cols; k++) {
+                result[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+}
+
+// Función para sumar un vector a cada fila de la matriz
+void sum_vect(double **matrix, double *vector, double **result, int rows, int cols) {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            result[i][j] = matrix[i][j] + vector[j];
+        }
+    }
+}
+
+// Función ReLU (reemplaza valores negativos por cero)
+void relu(double **matrix, int rows, int cols) {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            if (matrix[i][j] < 0) {
+                matrix[i][j] = 0;
+            }
+        }
+    }
+}
+
+// Función ArgMax (retorna el índice del valor máximo de cada fila)
+void argmax(double **matrix, int *predictions, int rows, int cols) {
+    for (int i = 0; i < rows; i++) {
+        int max_index = 0;
+        for (int j = 1; j < cols; j++) {
+            if (matrix[i][j] > matrix[i][max_index]) {
+                max_index = j;
+            }
+        }
+        predictions[i] = max_index; // Predicción del dígito (índice con valor más alto)
+    }
+}
 
 void print(void *arg) { printf("Hola, soy %d\n", *(int *)arg); }
 
@@ -301,18 +357,64 @@ void handle_events() {
     }
 }
 
+
+int main2(int argc, char *argv[]) {
+    int num = atoi(argv[1]);  // Convierte la cadena a un entero
+    printf("Resultado: %d\n", num + 3);
+
+    return 0;
+}
+
 // Función principal
 int main(int argc, char *argv[]) {
+
     if (argc != 2) {
         printf("El programa debe tener un único argumento, la cantidad de procesos que se van a generar\n");
         exit(1);
     }
 
+    int image_to_recognize = atoi(argv[1]);
     SDL_Window *window = init_window("Imagen de 28x28", 400, 400);
     SDL_Renderer *renderer = init_renderer(window);
 
     load_data(my_path);
-    show_image(renderer, data[0]);
+
+    // Aquí es donde hacemos las operaciones matriciales:
+    double **capa0 = malloc(60000 * sizeof(double *));
+    double **capa1 = malloc(60000 * sizeof(double *));
+    double **capa2 = malloc(60000 * sizeof(double *));
+    double **capa3 = malloc(60000 * sizeof(double *));
+    for (int i = 0; i < 60000; i++) {
+        capa0[i] = malloc(200 * sizeof(double));  // Asumiendo que capa0 tiene 200 valores
+        capa1[i] = malloc(100 * sizeof(double));  // Capa intermedia de 100 valores
+        capa2[i] = malloc(50 * sizeof(double));   // Capa intermedia de 50 valores
+        capa3[i] = malloc(10 * sizeof(double));   // Capa de salida con 10 valores
+    }
+
+    // Realizamos las operaciones de la red neuronal
+    mat_mul(data, mat1, capa0, 60000, 784, 200);  // Multiplicación data * mat1
+    sum_vect(capa0, vec1, capa0, 60000, 200);     // Suma de bias
+    relu(capa0, 60000, 200);                      // ReLU
+
+    mat_mul(capa0, mat2, capa1, 60000, 200, 100);  // Multiplicación capa0 * mat2
+    sum_vect(capa1, vec2, capa1, 60000, 100);      // Suma de bias //fallal aqui
+    relu(capa1, 60000, 100);                       // ReLU
+
+    mat_mul(capa1, mat3, capa2, 60000, 100, 50);   // Multiplicación capa1 * mat3
+    sum_vect(capa2, vec3, capa2, 60000, 50);       // Suma de bias
+    relu(capa2, 60000, 50);                        // ReLU
+
+    mat_mul(capa2, mat4, capa3, 60000, 50, 10);    // Multiplicación capa2 * mat4
+    sum_vect(capa3, vec4, capa3, 60000, 10);       // Suma de bias
+    relu(capa3, 60000, 10);                        // ReLU
+
+    //Predicción
+    int *predicciones = malloc(60000 * sizeof(int));  // Almacena las predicciones
+    argmax(capa3, predicciones, 60000, 10);  // Realiza las predicciones con ArgMax
+
+    printf("Predicción: %d\n", predicciones[image_to_recognize]);
+    
+    show_image(renderer, data[image_to_recognize]);
 
     // Mantener la ventana abierta hasta que el usuario la cierre
     handle_events();
