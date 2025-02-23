@@ -149,6 +149,14 @@ void load_data(char *path) {
     sprintf(str, "%sdata/digits.csv", path);
     read_vector(digits, str, data_nrows);
 
+    // Cargar la matriz de datos (imágenes)
+    data = malloc(data_nrows * sizeof(double *)); // 60,000 imágenes
+    for (int i = 0; i < data_nrows; i++) {
+        data[i] = malloc(data_ncols * sizeof(double)); // 784 valores por imagen
+    }
+    sprintf(str, "%sdata/data.csv", path);  // Ruta al archivo de datos
+    read_matrix(data, str, data_nrows, data_ncols, 1);  // Cargar la matriz de datos
+
     // Reservar memoria para mat1
     mat1 = malloc(matrices_rows[0] * sizeof(double *));
     for (int i = 0; i < matrices_rows[0]; i++) {
@@ -203,7 +211,6 @@ void unload_data() {
     free(vec4);
     free(str);
 }
-
 
 
 void print(void *arg) { printf("Hola, soy %d\n", *(int *)arg); }
