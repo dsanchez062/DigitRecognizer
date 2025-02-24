@@ -4,6 +4,7 @@
 #include <stdio.h>  // file handling functions
 #include <stdlib.h> // atoi
 #include <string.h> // strtok
+#include <time.h>
 #include <SDL2/SDL.h>
 #include <sys/wait.h>
 #define stacksize 1048576
@@ -358,12 +359,10 @@ void handle_events() {
 }
 
 
-int main2(int argc, char *argv[]) {
-    int num = atoi(argv[1]);  // Convierte la cadena a un entero
-    printf("Resultado: %d\n", num + 3);
-
-    return 0;
+double measure_time(clock_t start, clock_t end) {
+    return (double)(end - start) / CLOCKS_PER_SEC;
 }
+
 
 // Función principal
 int main(int argc, char *argv[]) {
@@ -374,10 +373,17 @@ int main(int argc, char *argv[]) {
     }
 
     int image_to_recognize = atoi(argv[1]);
+    clock_t start, end;  // Variables para medir tiempo
+
     SDL_Window *window = init_window("Imagen de 28x28", 400, 400);
     SDL_Renderer *renderer = init_renderer(window);
 
+    start = clock();
     load_data(my_path);
+    end = clock();
+    printf("Tiempo de carga de datos: %.6f segundos\n", measure_time(start, end));
+
+    start = clock();
 
     // Aquí es donde hacemos las operaciones matriciales:
     double **capa0 = malloc(60000 * sizeof(double *));
@@ -392,25 +398,41 @@ int main(int argc, char *argv[]) {
     }
 
     // Realizamos las operaciones de la red neuronal
+    start = clock();
     mat_mul(data, mat1, capa0, 60000, 784, 200);  // Multiplicación data * mat1
     sum_vect(capa0, vec1, capa0, 60000, 200);     // Suma de bias
     relu(capa0, 60000, 200);                      // ReLU
+    end = clock();
+    printf("Tiempo de operaciones entre data y mat1: %.6f segundos\n", measure_time(start, end));
 
+
+    start = clock();
     mat_mul(capa0, mat2, capa1, 60000, 200, 100);  // Multiplicación capa0 * mat2
     sum_vect(capa1, vec2, capa1, 60000, 100);      // Suma de bias //fallal aqui
     relu(capa1, 60000, 100);                       // ReLU
-
+    end = clock();
+    printf("Tiempo de operaciones entre capa0 y mat2: %.6f segundos\n", measure_time(start, end));
+    
+    start = clock();
     mat_mul(capa1, mat3, capa2, 60000, 100, 50);   // Multiplicación capa1 * mat3
     sum_vect(capa2, vec3, capa2, 60000, 50);       // Suma de bias
     relu(capa2, 60000, 50);                        // ReLU
+    end = clock();
+    printf("Tiempo de operaciones entre capa1 y mat3: %.6f segundos\n", measure_time(start, end));
 
+    start = clock();
     mat_mul(capa2, mat4, capa3, 60000, 50, 10);    // Multiplicación capa2 * mat4
     sum_vect(capa3, vec4, capa3, 60000, 10);       // Suma de bias
     relu(capa3, 60000, 10);                        // ReLU
+    end = clock();
+    printf("Tiempo de operaciones entre capa2 y mat4: %.6f segundos\n", measure_time(start, end));
 
     //Predicción
+    start = clock();
     int *predicciones = malloc(60000 * sizeof(int));  // Almacena las predicciones
     argmax(capa3, predicciones, 60000, 10);  // Realiza las predicciones con ArgMax
+    end = clock();
+    printf("Tiempo de predicciones: %.6f segundos\n", measure_time(start, end));
 
     printf("Predicción: %d\n", predicciones[image_to_recognize]);
     
