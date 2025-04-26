@@ -1,0 +1,7 @@
+# Ignorar archivos sensibles
+.vscode
+.DS_Store
+data.csv
+digits.csv
+main
+build
