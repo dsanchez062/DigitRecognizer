@@ -12,7 +12,7 @@
 static double **data;
 int data_nrows = 60000;
 int data_ncols = 784;
-char *my_path = "/home/dsanchez062/Desktop/DigitRecognizer/"; // tendréis que poner vuestro path
+char *my_path = "/home/dsanchez062/Desktop/DigitRecognizer/"; // Cambia al path correcto
 
 int seed = 6;
 int matrices_rows[4] = {784, 200, 100, 50};
