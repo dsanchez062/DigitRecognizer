@@ -372,7 +372,14 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    int image_to_recognize = atoi(argv[1]);
+    int image_to_recognize = atoi(argv[1])-1;
+
+    if (image_to_recognize < 0 || image_to_recognize > 59999) {
+        printf("Error: El índice de la imagen debe estar entre 1 y 60000\n");
+        exit(1);
+    }
+
+    
     clock_t start, end;  // Variables para medir tiempo
 
     SDL_Window *window = init_window("Imagen de 28x28", 400, 400);

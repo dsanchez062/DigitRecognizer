@@ -400,15 +400,15 @@ int main(int argc, char *argv[]) {
     }
 
     int num_processes = atoi(argv[1]);
-    int image_to_recognize = atoi(argv[2]);
+    int image_to_recognize = atoi(argv[2])-1;
 
     // Validar argumentos
     if (num_processes < 1 || num_processes > 60000) {
         printf("Error: El número de procesos debe estar entre 1 y 60000\n");
         exit(1);
     }
-    if (image_to_recognize < 0 || image_to_recognize >= 60000) {
-        printf("Error: El índice de la imagen debe estar entre 0 y 59999\n");
+    if (image_to_recognize < 0 || image_to_recognize > 59999) {
+        printf("Error: El índice de la imagen debe estar entre 1 y 60000\n");
         exit(1);
     }
 
