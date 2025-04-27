@@ -49,9 +49,6 @@ typedef struct {
     double *child_time; // Para almacenar el tiempo del proceso hijo
 } ChildArgs;
 
-// Prototipo de funciones
-double measure_time_timeval(struct timespec start, struct timespec end);
-
 // Función para leer una matriz
 int read_matrix(double **mat, char *file, int nrows, int ncols, int fac) {
     char *buffer = (char *)malloc(4096 * sizeof(char));

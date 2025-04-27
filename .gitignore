@@ -5,3 +5,5 @@ data.csv
 digits.csv
 main
 build
+DigitRecognizer_sequential
+DigitRecognizer_parallelized
